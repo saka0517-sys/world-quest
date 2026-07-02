@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>世界一周探検クエスト</title>
+<style>
+  :root{
+    --bg:#eef3f8; --card:#ffffff; --ink:#1a2a3a; --sub:#5a7a8a;
+    --ocean:#1a5276; --wave:#2e86c1; --gold:#b7950b; --gold-bg:#fef9e7;
+    --good:#1e8449; --bad:#922b21; --line:#d0e4f0;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,"Hiragino Sans","Yu Gothic",sans-serif;background:var(--bg);color:var(--ink);-webkit-tap-highlight-color:transparent;}
+  #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding:0 0 32px;}
+  header{padding:14px 16px 10px;position:sticky;top:0;background:var(--bg);z-index:5;}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .logo{font-size:15px;font-weight:700;color:var(--ocean);}
+  .stats{display:flex;gap:8px;}
+  .stat-pill{background:var(--card);border:0.5px solid var(--line);border-radius:20px;padding:4px 10px;font-size:12px;display:flex;align-items:center;gap:3px;}
+  .xpbar-wrap{height:8px;background:var(--card);border-radius:10px;overflow:hidden;border:0.5px solid var(--line);}
+  .xpbar{height:100%;background:linear-gradient(90deg,var(--ocean),var(--wave));width:0%;transition:width .4s;}
+  .screen{padding:0 16px;flex:1;display:none;}
+  .screen.active{display:block;}
+
+  /* Explorer card */
+  .explorer-card{background:linear-gradient(135deg,var(--ocean),#1f618d,var(--wave));border-radius:16px;padding:16px;color:#fff;display:flex;align-items:center;gap:14px;margin-bottom:16px;}
+  .explorer-emoji{font-size:40px;line-height:1;transition:transform .3s;}
+  .explorer-emoji.bump{transform:scale(1.25) rotate(-8deg);}
+  .explorer-info{flex:1;}
+  .explorer-rank{font-size:14px;font-weight:700;margin-bottom:2px;}
+  .explorer-sub{font-size:11px;opacity:0.85;margin-bottom:6px;}
+  .exp-bar-wrap{height:5px;background:rgba(255,255,255,0.3);border-radius:4px;overflow:hidden;}
+  .exp-bar{height:100%;background:var(--gold);width:0%;transition:width .4s;}
+
+  /* Section / grid */
+  .section-title{font-size:11px;color:var(--sub);margin:16px 0 8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;}
+  .region-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .region-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 10px;text-align:left;position:relative;overflow:hidden;}
+  .region-card.conquered{border-color:var(--gold);background:var(--gold-bg);}
+  .region-card .rc-emoji{font-size:22px;display:block;margin-bottom:5px;}
+  .region-card .rc-name{font-size:13px;font-weight:600;margin-bottom:2px;}
+  .region-card .rc-progress{font-size:11px;color:var(--sub);}
+  .region-card .rc-stamp{position:absolute;top:8px;right:8px;font-size:15px;}
+  .rc-bar-wrap{height:3px;background:var(--line);border-radius:2px;margin-top:5px;}
+  .rc-bar{height:100%;background:var(--wave);border-radius:2px;transition:width .4s;}
+  .region-card.conquered .rc-bar{background:var(--gold);}
+
+  /* Dir toggle */
+  .dir-toggle{display:flex;gap:8px;margin-bottom:14px;}
+  .dir-toggle button{flex:1;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 6px;font-size:11px;color:var(--sub);font-weight:500;}
+  .dir-toggle button.active{background:var(--ocean);color:#fff;border-color:var(--ocean);}
+
+  /* Wide btn */
+  .wide-btn{width:100%;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 14px;text-align:left;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;color:var(--ink);}
+  .badge-count{background:#fcebeb;color:var(--bad);font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;}
+
+  /* Quiz */
+  .back-link{font-size:12px;color:var(--sub);margin-bottom:10px;display:inline-block;}
+  .quiz-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .qcounter{font-size:12px;color:var(--sub);}
+  .timer{font-size:13px;font-weight:600;color:var(--wave);}
+  .timer.danger{color:var(--bad);}
+  .progress-track{height:5px;background:var(--line);border-radius:4px;overflow:hidden;margin-bottom:16px;}
+  .progress-fill{height:100%;background:var(--wave);width:0%;transition:width .3s;}
+  .boss-banner{background:linear-gradient(90deg,var(--ocean),#154360);color:var(--gold);padding:9px 14px;border-radius:12px;text-align:center;font-weight:700;margin-bottom:10px;display:none;font-size:13px;}
+  .boss-banner.show{display:block;animation:bossPop .4s;}
+  @keyframes bossPop{0%{transform:scale(0.85);opacity:0}100%{transform:scale(1);opacity:1}}
+  .qcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 16px;margin-bottom:14px;min-height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;}
+  .qcard.boss{border-color:var(--gold);background:var(--gold-bg);}
+  .qsub{font-size:11px;color:var(--sub);}
+  .qtext{font-size:18px;font-weight:700;text-align:center;line-height:1.4;}
+  .choices{display:flex;flex-direction:column;gap:9px;}
+  .choice-btn{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13px;text-align:left;display:flex;align-items:center;gap:9px;line-height:1.3;}
+  .choice-btn .lt{width:22px;height:22px;border-radius:50%;background:var(--bg);border:0.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;color:var(--sub);}
+  .choice-btn.correct{background:#e8f8ee;border-color:#27ae60;}
+  .choice-btn.correct .lt{background:#27ae60;color:#fff;border-color:#27ae60;}
+  .choice-btn.wrong{background:#fceaea;border-color:#e74c3c;}
+  .choice-btn.wrong .lt{background:#e74c3c;color:#fff;border-color:#e74c3c;}
+  .choice-btn:disabled{opacity:0.85;}
+  .feedback-bar{margin-top:12px;padding:11px 12px;border-radius:12px;font-size:13px;display:none;align-items:center;justify-content:space-between;gap:8px;}
+  .feedback-bar.show{display:flex;}
+  .feedback-bar.ok{background:#e8f8ee;color:#1e6e3a;}
+  .feedback-bar.ng{background:#fceaea;color:#7b1d1d;}
+  .next-btn{background:var(--ink);color:#fff;border:none;border-radius:9px;padding:7px 14px;font-size:12px;font-weight:600;flex-shrink:0;cursor:pointer;}
+
+  /* Result */
+  .result-hero{text-align:center;padding:24px 0 8px;}
+  .result-hero .big{font-size:40px;font-weight:700;margin-bottom:3px;}
+  .result-hero .label{font-size:13px;color:var(--sub);}
+  .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0;}
+  .metric-card{background:var(--card);border-radius:12px;padding:12px;text-align:center;border:1px solid var(--line);}
+  .metric-card .v{font-size:22px;font-weight:700;}
+  .metric-card .l{font-size:11px;color:var(--sub);margin-top:2px;}
+  .badge-unlock{background:var(--gold-bg);border:1px solid var(--gold);border-radius:12px;padding:10px 12px;font-size:12px;color:#7d6608;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+  .conquest-unlock{background:#e8f8ee;border:1px solid #27ae60;border-radius:12px;padding:10px 12px;font-size:12px;color:#1e6e3a;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+
+  /* Buttons */
+  button{cursor:pointer;font-family:inherit;}
+  .btn-row{display:flex;gap:10px;}
+  .primary-btn{flex:1;background:var(--ocean);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:600;}
+  .ghost-btn{flex:1;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;}
+  .empty-note{font-size:12px;color:var(--sub);text-align:center;padding:24px 10px;}
+  .badge-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .badge-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;}
+  .badge-card .bc-ic{font-size:20px;display:block;margin-bottom:4px;}
+  .badge-card .bc-name{font-size:11px;font-weight:600;}
+
+  /* Effects */
+  .combo-pop{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--ocean);color:#fff;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:150;white-space:nowrap;}
+  .combo-pop.show{opacity:1;transform:translateX(-50%) translateY(6px);}
+  .float-score{position:fixed;font-size:18px;font-weight:700;color:var(--good);pointer-events:none;z-index:150;animation:floatUp 1s forwards;left:50%;top:46%;}
+  @keyframes floatUp{0%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-65px) scale(1.1)}}
+  .confetti-canvas{position:fixed;inset:0;pointer-events:none;z-index:200;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="topbar">
+      <div class="logo">🌍 世界一周探検クエスト</div>
+      <div class="stats">
+        <div class="stat-pill">🔥<span id="streakNum">0</span></div>
+        <div class="stat-pill">Lv<span id="levelNum">1</span></div>
+      </div>
+    </div>
+    <div class="xpbar-wrap"><div class="xpbar" id="xpbar"></div></div>
+  </header>
+
+  <!-- HOME -->
+  <div class="screen active" id="screen-home">
+    <div class="explorer-card">
+      <span class="explorer-emoji" id="explorerEmoji">🗺️</span>
+      <div class="explorer-info">
+        <div class="explorer-rank" id="explorerRank">新米探検家(Lv.1)</div>
+        <div class="explorer-sub" id="explorerSub">世界を旅しよう！</div>
+        <div class="exp-bar-wrap"><div class="exp-bar" id="expBar"></div></div>
+      </div>
+    </div>
+    <div class="dir-toggle">
+      <button id="dirFwd" class="active" onclick="setDir('forward')">地名 → 首都・県庁所在地</button>
+      <button id="dirRev" onclick="setDir('reverse')">首都・県庁所在地 → 地名</button>
+    </div>
+    <div class="section-title">復習</div>
+    <button class="wide-btn" id="reviewBtn" onclick="startReview()">
+      <span>❗ 間違えた問題を復習する</span>
+      <span class="badge-count" id="reviewCount">0</span>
+    </button>
+    <div class="section-title">🌏 世界の首都 — 大陸別</div>
+    <div class="region-grid" id="worldGrid"></div>
+    <div class="section-title">🗾 日本の県庁所在地 — 地方別</div>
+    <div class="region-grid" id="japanGrid"></div>
+    <div class="section-title">特別モード</div>
+    <div class="region-grid">
+      <button class="region-card" onclick="startQuiz('world_all')">
+        <span class="rc-emoji">🌐</span>
+        <div class="rc-name">世界一周チャレンジ</div>
+        <div class="rc-progress">全大陸ランダム</div>
+      </button>
+      <button class="region-card" onclick="startQuiz('japan_all')">
+        <span class="rc-emoji">🗾</span>
+        <div class="rc-name">全国制覇チャレンジ</div>
+        <div class="rc-progress">全都道府県ランダム</div>
+      </button>
+    </div>
+    <div class="section-title">実績・スタンプ</div>
+    <div class="badge-grid" id="badgeGrid"></div>
+  </div>
+
+  <!-- QUIZ -->
+  <div class="screen" id="screen-quiz">
+    <a class="back-link" onclick="confirmExit()">← 探検を中断して戻る</a>
+    <div class="quiz-head">
+      <div class="qcounter" id="qcounter">1 / 10</div>
+      <div class="timer" id="timer">12</div>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="boss-banner" id="bossBanner">🏆 最終問題！正解で大量XP！</div>
+    <div class="qcard" id="qcard">
+      <div class="qsub" id="qsub"></div>
+      <div class="qtext" id="qtext"></div>
+    </div>
+    <div class="choices" id="choices"></div>
+    <div class="feedback-bar" id="feedbackBar">
+      <span id="feedbackText"></span>
+      <button class="next-btn" onclick="nextQuestion()">次へ →</button>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="screen" id="screen-result">
+    <div class="result-hero">
+      <div class="big" id="resultScore">0/10</div>
+      <div class="label">正答率 <span id="resultAcc">0%</span></div>
+    </div>
+    <div id="conquestArea"></div>
+    <div id="badgeArea"></div>
+    <div class="result-grid">
+      <div class="metric-card"><div class="v" id="resultXp">+0</div><div class="l">獲得XP</div></div>
+      <div class="metric-card"><div class="v" id="resultCombo">0</div><div class="l">最大コンボ</div></div>
+    </div>
+    <div class="btn-row">
+      <button class="ghost-btn" onclick="goHome()">ホームへ</button>
+      <button class="primary-btn" onclick="retrySame()">もう一度</button>
+    </div>
+  </div>
+</div>
+
+<div class="combo-pop" id="comboPop"></div>
+<canvas class="confetti-canvas" id="confettiCanvas"></canvas>
+
+<script>
+/* ===== WORLD DATA: [国名, 首都, 大陸コード] ===== */
+const WORLD = [
+// アジア(47カ国)
+["日本","東京","asia"],["中国","北京","asia"],["韓国","ソウル","asia"],["北朝鮮","平壌","asia"],
+["モンゴル","ウランバートル","asia"],["カザフスタン","アスタナ","asia"],["ウズベキスタン","タシケント","asia"],
+["キルギス","ビシュケク","asia"],["タジキスタン","ドゥシャンベ","asia"],["トルクメニスタン","アシガバット","asia"],
+["アフガニスタン","カブール","asia"],["パキスタン","イスラマバード","asia"],["インド","ニューデリー","asia"],
+["バングラデシュ","ダッカ","asia"],["スリランカ","スリジャヤワルダナプラコッテ","asia"],
+["ネパール","カトマンズ","asia"],["ブータン","ティンプー","asia"],["ミャンマー","ネーピードー","asia"],
+["タイ","バンコク","asia"],["ラオス","ビエンチャン","asia"],["ベトナム","ハノイ","asia"],
+["カンボジア","プノンペン","asia"],["マレーシア","クアラルンプール","asia"],["シンガポール","シンガポール","asia"],
+["インドネシア","ジャカルタ","asia"],["フィリピン","マニラ","asia"],["東ティモール","ディリ","asia"],
+["ブルネイ","バンダルスリブガワン","asia"],["イラン","テヘラン","asia"],["イラク","バグダッド","asia"],
+["シリア","ダマスカス","asia"],["レバノン","ベイルート","asia"],["ヨルダン","アンマン","asia"],
+["イスラエル","エルサレム","asia"],["サウジアラビア","リヤド","asia"],["イエメン","サナア","asia"],
+["オマーン","マスカット","asia"],["アラブ首長国連邦","アブダビ","asia"],["カタール","ドーハ","asia"],
+["バーレーン","マナーマ","asia"],["クウェート","クウェートシティ","asia"],["キプロス","ニコシア","asia"],
+["トルコ","アンカラ","asia"],["ジョージア","トビリシ","asia"],["アルメニア","エレバン","asia"],
+["アゼルバイジャン","バクー","asia"],["モルディブ","マレ","asia"],
+// ヨーロッパ(45カ国)
+["イギリス","ロンドン","europe"],["フランス","パリ","europe"],["ドイツ","ベルリン","europe"],
+["イタリア","ローマ","europe"],["スペイン","マドリード","europe"],["ポルトガル","リスボン","europe"],
+["オランダ","アムステルダム","europe"],["ベルギー","ブリュッセル","europe"],["ルクセンブルク","ルクセンブルク市","europe"],
+["スイス","ベルン","europe"],["オーストリア","ウィーン","europe"],["アイルランド","ダブリン","europe"],
+["アイスランド","レイキャビク","europe"],["ノルウェー","オスロ","europe"],["スウェーデン","ストックホルム","europe"],
+["デンマーク","コペンハーゲン","europe"],["フィンランド","ヘルシンキ","europe"],["エストニア","タリン","europe"],
+["ラトビア","リガ","europe"],["リトアニア","ビリニュス","europe"],["ポーランド","ワルシャワ","europe"],
+["チェコ","プラハ","europe"],["スロバキア","ブラチスラバ","europe"],["ハンガリー","ブダペスト","europe"],
+["ルーマニア","ブカレスト","europe"],["ブルガリア","ソフィア","europe"],["ギリシャ","アテネ","europe"],
+["クロアチア","ザグレブ","europe"],["スロベニア","リュブリャナ","europe"],["ボスニア・ヘルツェゴビナ","サラエボ","europe"],
+["セルビア","ベオグラード","europe"],["モンテネグロ","ポドゴリツァ","europe"],["北マケドニア","スコピエ","europe"],
+["アルバニア","ティラナ","europe"],["モルドバ","キシナウ","europe"],["ウクライナ","キーウ","europe"],
+["ベラルーシ","ミンスク","europe"],["ロシア","モスクワ","europe"],["マルタ","バレッタ","europe"],
+["モナコ","モナコ","europe"],["リヒテンシュタイン","ファドーツ","europe"],["サンマリノ","サンマリノ","europe"],
+["バチカン","バチカン市国","europe"],["アンドラ","アンドラ・ラ・ベリャ","europe"],["コソボ","プリシュティナ","europe"],
+// アフリカ(54カ国)
+["ナイジェリア","アブジャ","africa"],["エチオピア","アディスアベバ","africa"],["エジプト","カイロ","africa"],
+["コンゴ民主共和国","キンシャサ","africa"],["タンザニア","ドドマ","africa"],["ケニア","ナイロビ","africa"],
+["ウガンダ","カンパラ","africa"],["アルジェリア","アルジェ","africa"],["スーダン","ハルツーム","africa"],
+["モロッコ","ラバト","africa"],["アンゴラ","ルアンダ","africa"],["モザンビーク","マプト","africa"],
+["ガーナ","アクラ","africa"],["マダガスカル","アンタナナリボ","africa"],["カメルーン","ヤウンデ","africa"],
+["コートジボワール","ヤムスクロ","africa"],["ニジェール","ニアメ","africa"],["マリ","バマコ","africa"],
+["ブルキナファソ","ワガドゥグー","africa"],["マラウイ","リロングウェ","africa"],["ザンビア","ルサカ","africa"],
+["セネガル","ダカール","africa"],["チャド","ンジャメナ","africa"],["ソマリア","モガディシュ","africa"],
+["ジンバブエ","ハラレ","africa"],["ギニア","コナクリ","africa"],["ルワンダ","キガリ","africa"],
+["ベナン","ポルトノボ","africa"],["ブルンジ","ギテガ","africa"],["チュニジア","チュニス","africa"],
+["南スーダン","ジュバ","africa"],["トーゴ","ロメ","africa"],["シエラレオネ","フリータウン","africa"],
+["リビア","トリポリ","africa"],["コンゴ共和国","ブラザビル","africa"],["中央アフリカ","バンギ","africa"],
+["リベリア","モンロビア","africa"],["モーリタニア","ヌアクショット","africa"],["エリトリア","アスマラ","africa"],
+["ナミビア","ウィントフック","africa"],["ガンビア","バンジュール","africa"],["ボツワナ","ハボロネ","africa"],
+["ガボン","リーブルビル","africa"],["レソト","マセル","africa"],["ギニアビサウ","ビサウ","africa"],
+["赤道ギニア","マラボ","africa"],["モーリシャス","ポートルイス","africa"],["エスワティニ","ムババーネ","africa"],
+["ジブチ","ジブチ","africa"],["コモロ","モロニ","africa"],["カーボベルデ","プライア","africa"],
+["サントメ・プリンシペ","サントメ","africa"],["セーシェル","ビクトリア","africa"],["南アフリカ","プレトリア","africa"],
+// 北アメリカ(23カ国)
+["アメリカ合衆国","ワシントンD.C.","namerica"],["カナダ","オタワ","namerica"],["メキシコ","メキシコシティ","namerica"],
+["グアテマラ","グアテマラシティ","namerica"],["ベリーズ","ベルモパン","namerica"],["ホンジュラス","テグシガルパ","namerica"],
+["エルサルバドル","サンサルバドル","namerica"],["ニカラグア","マナグア","namerica"],["コスタリカ","サンホセ","namerica"],
+["パナマ","パナマシティ","namerica"],["キューバ","ハバナ","namerica"],["ジャマイカ","キングストン","namerica"],
+["ハイチ","ポルトープランス","namerica"],["ドミニカ共和国","サントドミンゴ","namerica"],
+["トリニダード・トバゴ","ポートオブスペイン","namerica"],["バルバドス","ブリッジタウン","namerica"],
+["セントルシア","カストリーズ","namerica"],["セントビンセント・グレナディーン","キングスタウン","namerica"],
+["グレナダ","セントジョージズ","namerica"],["アンティグア・バーブーダ","セントジョンズ","namerica"],
+["ドミニカ国","ロゾー","namerica"],["セントクリストファー・ネービス","バセテール","namerica"],["バハマ","ナッソー","namerica"],
+// 南アメリカ(12カ国)
+["ブラジル","ブラジリア","samerica"],["アルゼンチン","ブエノスアイレス","samerica"],
+["コロンビア","ボゴタ","samerica"],["ペルー","リマ","samerica"],["ベネズエラ","カラカス","samerica"],
+["チリ","サンティアゴ","samerica"],["エクアドル","キト","samerica"],["ボリビア","スクレ","samerica"],
+["パラグアイ","アスンシオン","samerica"],["ウルグアイ","モンテビデオ","samerica"],
+["ガイアナ","ジョージタウン","samerica"],["スリナム","パラマリボ","samerica"],
+// オセアニア(14カ国)
+["オーストラリア","キャンベラ","oceania"],["ニュージーランド","ウェリントン","oceania"],
+["パプアニューギニア","ポートモレスビー","oceania"],["フィジー","スバ","oceania"],
+["ソロモン諸島","ホニアラ","oceania"],["バヌアツ","ポートビラ","oceania"],["サモア","アピア","oceania"],
+["キリバス","タラワ","oceania"],["トンガ","ヌクアロファ","oceania"],["ミクロネシア連邦","パリキール","oceania"],
+["マーシャル諸島","マジュロ","oceania"],["パラオ","マルキョク","oceania"],
+["ナウル","ヤレン","oceania"],["ツバル","フナフティ","oceania"],
+];
+
+/* ===== JAPAN DATA: [都道府県, 県庁所在地, 地方コード] ===== */
+const JAPAN = [
+["北海道","札幌市","hokkaido"],
+["青森県","青森市","tohoku"],["岩手県","盛岡市","tohoku"],["宮城県","仙台市","tohoku"],
+["秋田県","秋田市","tohoku"],["山形県","山形市","tohoku"],["福島県","福島市","tohoku"],
+["茨城県","水戸市","kanto"],["栃木県","宇都宮市","kanto"],["群馬県","前橋市","kanto"],
+["埼玉県","さいたま市","kanto"],["千葉県","千葉市","kanto"],["東京都","新宿区(都庁)","kanto"],["神奈川県","横浜市","kanto"],
+["新潟県","新潟市","chubu"],["富山県","富山市","chubu"],["石川県","金沢市","chubu"],
+["福井県","福井市","chubu"],["山梨県","甲府市","chubu"],["長野県","長野市","chubu"],
+["岐阜県","岐阜市","chubu"],["静岡県","静岡市","chubu"],["愛知県","名古屋市","chubu"],
+["三重県","津市","kinki"],["滋賀県","大津市","kinki"],["京都府","京都市","kinki"],
+["大阪府","大阪市","kinki"],["兵庫県","神戸市","kinki"],["奈良県","奈良市","kinki"],["和歌山県","和歌山市","kinki"],
+["鳥取県","鳥取市","chugoku"],["島根県","松江市","chugoku"],["岡山県","岡山市","chugoku"],
+["広島県","広島市","chugoku"],["山口県","山口市","chugoku"],
+["徳島県","徳島市","shikoku"],["香川県","高松市","shikoku"],["愛媛県","松山市","shikoku"],["高知県","高知市","shikoku"],
+["福岡県","福岡市","kyushu"],["佐賀県","佐賀市","kyushu"],["長崎県","長崎市","kyushu"],
+["熊本県","熊本市","kyushu"],["大分県","大分市","kyushu"],["宮崎県","宮崎市","kyushu"],
+["鹿児島県","鹿児島市","kyushu"],["沖縄県","那覇市","kyushu"],
+];
+
+/* ===== REGION METADATA ===== */
+const WORLD_REGIONS = {
+  asia:     {name:"アジア",     emoji:"🌏"},
+  europe:   {name:"ヨーロッパ", emoji:"🏰"},
+  africa:   {name:"アフリカ",   emoji:"🦁"},
+  namerica: {name:"北アメリカ", emoji:"🗽"},
+  samerica: {name:"南アメリカ", emoji:"🌿"},
+  oceania:  {name:"オセアニア", emoji:"🦘"},
+};
+const JAPAN_REGIONS = {
+  hokkaido: {name:"北海道",     emoji:"🐻"},
+  tohoku:   {name:"東北",       emoji:"⛄"},
+  kanto:    {name:"関東",       emoji:"🗼"},
+  chubu:    {name:"中部",       emoji:"🏔️"},
+  kinki:    {name:"近畿",       emoji:"⛩️"},
+  chugoku:  {name:"中国地方",   emoji:"🦌"},
+  shikoku:  {name:"四国",       emoji:"🍊"},
+  kyushu:   {name:"九州・沖縄", emoji:"🌺"},
+};
+
+/* ===== STATE ===== */
+const STORAGE_KEY = "worldQuest_v1";
+let state = loadState();
+function loadState(){
+  try{ const r=localStorage.getItem(STORAGE_KEY); if(r) return JSON.parse(r); }catch(e){}
+  return {xp:0,level:1,streak:0,correct:{},wrongPool:[],badges:[],dir:"forward"};
+}
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function xpForLevel(lv){ return 60*lv; }
+function addXp(amount){
+  state.xp += amount;
+  let need = xpForLevel(state.level);
+  while(state.xp >= need){
+    state.xp -= need; state.level++; need = xpForLevel(state.level);
+    unlockBadge("lv"+state.level, `レベル${state.level}に到達！`);
+    setTimeout(()=>confettiBurst(true), 150);
+  }
+  saveState(); renderHeader();
+}
+
+/* ===== BADGES ===== */
+const BADGE_DEFS = {
+  first:"初陣完了！",combo5:"5連続正解！",combo10:"10連続正解！",perfect:"全問正解！",
+  lv5:"レベル5到達！",lv10:"レベル10到達！",lv20:"レベル20到達！",
+  w_asia:"アジア制覇！",w_europe:"ヨーロッパ制覇！",w_africa:"アフリカ制覇！",
+  w_namerica:"北アメリカ制覇！",w_samerica:"南アメリカ制覇！",w_oceania:"オセアニア制覇！",
+  world_all:"世界全大陸制覇！",
+  j_hokkaido:"北海道制覇！",j_tohoku:"東北制覇！",j_kanto:"関東制覇！",j_chubu:"中部制覇！",
+  j_kinki:"近畿制覇！",j_chugoku:"中国地方制覇！",j_shikoku:"四国制覇！",j_kyushu:"九州・沖縄制覇！",
+  japan_all:"日本全国制覇！",
+};
+let newlyUnlocked=[];
+function unlockBadge(key, label){
+  if(!state.badges.includes(key)){
+    state.badges.push(key);
+    newlyUnlocked.push(label||BADGE_DEFS[key]||key);
+    saveState();
+  }
+}
+
+/* ===== EXPLORER RANKS ===== */
+const RANKS=[
+  {min:1, emoji:"🗺️",name:"新米探検家",   sub:"世界を旅しよう！"},
+  {min:3, emoji:"⛵", name:"見習い冒険者", sub:"地図を手に出発！"},
+  {min:6, emoji:"🚢",name:"航海士",       sub:"大海原を進め！"},
+  {min:10,emoji:"🌍",name:"世界の旅人",   sub:"各大陸を踏破中…"},
+  {min:15,emoji:"⚓",name:"大航海士",     sub:"海図を描く者"},
+  {min:20,emoji:"🧭",name:"探検家の長",   sub:"未踏の地を求めて"},
+  {min:30,emoji:"👑",name:"地理の覇者",   sub:"世界を制した！"},
+];
+function getRank(lv){ let c=RANKS[0]; for(const r of RANKS){ if(lv>=r.min) c=r; } return c; }
+function bumpExplorer(){
+  const el=document.getElementById("explorerEmoji");
+  if(!el) return;
+  el.classList.add("bump");
+  setTimeout(()=>el.classList.remove("bump"),300);
+}
+
+/* ===== RENDER HEADER ===== */
+function renderHeader(){
+  document.getElementById("levelNum").textContent=state.level;
+  document.getElementById("streakNum").textContent=state.streak;
+  const need=xpForLevel(state.level);
+  document.getElementById("xpbar").style.width=Math.min(100,state.xp/need*100)+"%";
+  const rank=getRank(state.level);
+  const ee=document.getElementById("explorerEmoji");
+  if(ee){
+    ee.textContent=rank.emoji;
+    document.getElementById("explorerRank").textContent=rank.name+" (Lv."+state.level+")";
+    document.getElementById("explorerSub").textContent=rank.sub;
+    document.getElementById("expBar").style.width=Math.min(100,state.xp/need*100)+"%";
+  }
+}
+
+/* ===== DIRECTION ===== */
+function setDir(d){
+  state.dir=d; saveState();
+  document.getElementById("dirFwd").classList.toggle("active",d==="forward");
+  document.getElementById("dirRev").classList.toggle("active",d==="reverse");
+}
+
+/* ===== CONQUEST ===== */
+function getProgress(pool, code, prefix){
+  const entries=pool.filter(e=>e[2]===code);
+  const done=entries.filter(e=>state.correct[prefix+e[0]]).length;
+  return {done, total:entries.length, conquered:done===entries.length&&entries.length>0};
+}
+function checkAllConquests(){
+  let worldAll=true, japanAll=true;
+  for(const code of Object.keys(WORLD_REGIONS)){
+    const {conquered}=getProgress(WORLD,code,"w:");
+    if(conquered) unlockBadge("w_"+code, WORLD_REGIONS[code].name+"制覇！");
+    else worldAll=false;
+  }
+  if(worldAll) unlockBadge("world_all");
+  for(const code of Object.keys(JAPAN_REGIONS)){
+    const {conquered}=getProgress(JAPAN,code,"j:");
+    if(conquered) unlockBadge("j_"+code, JAPAN_REGIONS[code].name+"制覇！");
+    else japanAll=false;
+  }
+  if(japanAll) unlockBadge("japan_all");
+}
+
+/* ===== RENDER HOME ===== */
+function renderHome(){
+  setDir(state.dir);
+
+  const wg=document.getElementById("worldGrid");
+  wg.innerHTML="";
+  for(const [code,info] of Object.entries(WORLD_REGIONS)){
+    const {done,total,conquered}=getProgress(WORLD,code,"w:");
+    const pct=total>0?done/total*100:0;
+    const btn=document.createElement("button");
+    btn.className="region-card"+(conquered?" conquered":"");
+    btn.onclick=()=>startQuiz("world_"+code);
+    btn.innerHTML=`${conquered?'<span class="rc-stamp">📫</span>':''}<span class="rc-emoji">${info.emoji}</span><div class="rc-name">${info.name}</div><div class="rc-progress">${done}/${total} 制覇</div><div class="rc-bar-wrap"><div class="rc-bar" style="width:${pct}%"></div></div>`;
+    wg.appendChild(btn);
+  }
+
+  const jg=document.getElementById("japanGrid");
+  jg.innerHTML="";
+  for(const [code,info] of Object.entries(JAPAN_REGIONS)){
+    const {done,total,conquered}=getProgress(JAPAN,code,"j:");
+    const pct=total>0?done/total*100:0;
+    const btn=document.createElement("button");
+    btn.className="region-card"+(conquered?" conquered":"");
+    btn.onclick=()=>startQuiz("japan_"+code);
+    btn.innerHTML=`${conquered?'<span class="rc-stamp">📫</span>':''}<span class="rc-emoji">${info.emoji}</span><div class="rc-name">${info.name}</div><div class="rc-progress">${done}/${total} 制覇</div><div class="rc-bar-wrap"><div class="rc-bar" style="width:${pct}%"></div></div>`;
+    jg.appendChild(btn);
+  }
+
+  document.getElementById("reviewCount").textContent=state.wrongPool.length;
+  document.getElementById("reviewBtn").style.opacity=state.wrongPool.length?"1":"0.5";
+
+  const bg=document.getElementById("badgeGrid");
+  bg.innerHTML="";
+  const earned=state.badges.slice(-4).reverse();
+  if(earned.length===0){
+    bg.innerHTML=`<div class="empty-note" style="grid-column:1/3;">クイズに挑戦して実績を解除しよう</div>`;
+  } else {
+    earned.forEach(key=>{
+      const div=document.createElement("div");
+      div.className="badge-card";
+      div.innerHTML=`<span class="bc-ic">🏅</span><span class="bc-name">${BADGE_DEFS[key]||key}</span>`;
+      bg.appendChild(div);
+    });
+  }
+  renderHeader();
+}
+
+/* ===== QUIZ ===== */
+let session=null, timerInterval=null, answered=false;
+
+function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function makeQ(entry, pool, prefix, isWorld){
+  const [name,capital,region]=entry;
+  const sameRegion=pool.filter(e=>e[2]===region&&e[0]!==name);
+  const others=pool.filter(e=>e[0]!==name);
+  const src=sameRegion.length>=3?sameRegion:others;
+  let qtext, correct, distField;
+  if(state.dir==="forward"){
+    qtext=isWorld?`${name}の首都は？`:`${name}の県庁所在地は？`;
+    correct=capital; distField=1;
+  } else {
+    qtext=isWorld?`「${capital}」はどの国の首都？`:`「${capital}」はどの都道府県の県庁所在地？`;
+    correct=name; distField=0;
+  }
+  const rawDists=shuffle(src).slice(0,6).map(e=>e[distField]);
+  const dists=[...new Set(rawDists.filter(d=>d!==correct))].slice(0,3);
+  while(dists.length<3) dists.push(correct+(dists.length+1));
+  const opts=shuffle([correct,...dists]);
+  return {
+    qtext,
+    qsub:isWorld?(state.dir==="forward"?"国 → 首都":"首都 → 国"):(state.dir==="forward"?"都道府県 → 県庁所在地":"県庁所在地 → 都道府県"),
+    opts, ansIdx:opts.indexOf(correct),
+    key:prefix+name, region, isWorld, name, capital
+  };
+}
+
+function buildSet(target){
+  if(target==="review") return [...state.wrongPool];
+  let pool, prefix, isWorld;
+  if(target.startsWith("world_")){
+    const code=target.replace("world_","");
+    pool=code==="all"?WORLD:WORLD.filter(e=>e[2]===code);
+    prefix="w:"; isWorld=true;
+  } else {
+    const code=target.replace("japan_","");
+    pool=code==="all"?JAPAN:JAPAN.filter(e=>e[2]===code);
+    prefix="j:"; isWorld=false;
+  }
+  return shuffle(pool).slice(0,Math.min(10,pool.length)).map(e=>makeQ(e,isWorld?WORLD:JAPAN,prefix,isWorld));
+}
+
+function startQuiz(target){
+  const qs=buildSet(target);
+  if(!qs.length){ return; }
+  session={target,questions:qs,idx:0,correctCount:0,maxCombo:0,combo:0,mode:target==="review"?"review":"normal"};
+  showScreen("quiz"); renderQ();
+}
+function startReview(){ if(!state.wrongPool.length) return; startQuiz("review"); }
+function retrySame(){ session.mode==="review"?startReview():startQuiz(session.target); }
+
+function showScreen(name){
+  document.querySelectorAll(".screen").forEach(el=>el.classList.remove("active"));
+  document.getElementById("screen-"+name).classList.add("active");
+}
+
+function renderQ(){
+  answered=false;
+  clearInterval(timerInterval);
+  const total=session.questions.length;
+  document.getElementById("qcounter").textContent=`${session.idx+1} / ${total}`;
+  document.getElementById("progressFill").style.width=(session.idx/total*100)+"%";
+  const q=session.questions[session.idx];
+  document.getElementById("qsub").textContent=q.qsub;
+  document.getElementById("qtext").textContent=q.qtext;
+  const isBoss=session.idx===total-1&&total>=5&&session.mode!=="review";
+  session.isBoss=isBoss;
+  document.getElementById("bossBanner").classList.toggle("show",isBoss);
+  document.getElementById("qcard").classList.toggle("boss",isBoss);
+
+  const choicesEl=document.getElementById("choices");
+  choicesEl.innerHTML="";
+  ["A","B","C","D"].forEach((lbl,i)=>{
+    const btn=document.createElement("button");
+    btn.className="choice-btn";
+    btn.innerHTML=`<span class="lt">${lbl}</span><span>${q.opts[i]}</span>`;
+    btn.onclick=()=>selectAnswer(i,q);
+    choicesEl.appendChild(btn);
+  });
+  document.getElementById("feedbackBar").classList.remove("show","ok","ng");
+
+  let timeLeft=isBoss?18:12;
+  const timerEl=document.getElementById("timer");
+  timerEl.textContent=timeLeft; timerEl.classList.remove("danger");
+  timerInterval=setInterval(()=>{
+    timeLeft--; timerEl.textContent=timeLeft;
+    if(timeLeft<=5) timerEl.classList.add("danger");
+    if(timeLeft<=0){ clearInterval(timerInterval); if(!answered) selectAnswer(-1,q); }
+  },1000);
+}
+
+function selectAnswer(chosenIdx, q){
+  if(answered) return;
+  answered=true;
+  clearInterval(timerInterval);
+  const allBtns=document.querySelectorAll(".choice-btn");
+  allBtns.forEach(b=>b.disabled=true);
+  const isCorrect=chosenIdx===q.ansIdx;
+  if(allBtns[q.ansIdx]) allBtns[q.ansIdx].classList.add("correct");
+  if(!isCorrect&&chosenIdx>=0&&allBtns[chosenIdx]) allBtns[chosenIdx].classList.add("wrong");
+
+  const fb=document.getElementById("feedbackBar");
+  fb.classList.add("show");
+
+  if(isCorrect){
+    fb.classList.add("ok"); fb.classList.remove("ng");
+    session.combo++; session.maxCombo=Math.max(session.maxCombo,session.combo);
+    session.correctCount++; state.streak++;
+    let bonus=session.combo>=10?20:session.combo>=5?12:5;
+    if(session.isBoss) bonus*=2;
+    document.getElementById("feedbackText").textContent=(session.isBoss?"🏆 最終問題クリア！":"✅ 正解！")+`(+${bonus}XP)`+(session.combo>=3?` 🔥${session.combo}連続！`:"");
+    addXp(bonus);
+    spawnFloat("+"+bonus+" XP");
+    bumpExplorer();
+    confettiBurst(session.isBoss);
+    if(session.combo===5){unlockBadge("combo5");flashCombo("5連続正解！");}
+    if(session.combo===10){unlockBadge("combo10");flashCombo("10連続正解！");}
+    if(session.mode!=="review"){
+      state.correct[q.key]=true;
+    } else {
+      state.wrongPool=state.wrongPool.filter(w=>w.key!==q.key);
+    }
+    saveState();
+  } else {
+    fb.classList.add("ng"); fb.classList.remove("ok");
+    session.combo=0; state.streak=0;
+    document.getElementById("feedbackText").textContent=(chosenIdx===-1?"⏰ 時間切れ…正解は「":"❌ 残念！正解は「")+q.opts[q.ansIdx]+"」";
+    if(session.mode!=="review"){
+      if(!state.wrongPool.some(w=>w.key===q.key)) state.wrongPool.push(q);
+    }
+    saveState();
+  }
+}
+
+function nextQuestion(){
+  if(session.idx+1<session.questions.length){session.idx++;renderQ();}
+  else finishSession();
+}
+
+function finishSession(){
+  newlyUnlocked=[];
+  if(!state.badges.includes("first")) unlockBadge("first");
+  if(session.correctCount===session.questions.length){unlockBadge("perfect");setTimeout(()=>confettiBurst(true),200);}
+  const prevBadges=[...state.badges];
+  checkAllConquests();
+  saveState();
+
+  document.getElementById("resultScore").textContent=`${session.correctCount}/${session.questions.length}`;
+  const acc=Math.round(session.correctCount/session.questions.length*100);
+  document.getElementById("resultAcc").textContent=acc+"%";
+  document.getElementById("resultXp").textContent="+"+(session.correctCount*5+(session.maxCombo>=10?20:session.maxCombo>=5?12:0));
+  document.getElementById("resultCombo").textContent=session.maxCombo;
+
+  // 制覇通知
+  const ca=document.getElementById("conquestArea");
+  ca.innerHTML="";
+  state.badges.filter(b=>!prevBadges.includes(b)&&(BADGE_DEFS[b]||"").includes("制覇")).forEach(key=>{
+    const div=document.createElement("div");
+    div.className="conquest-unlock";
+    div.innerHTML=`📫 <span>${BADGE_DEFS[key]||key}</span>`;
+    ca.appendChild(div);
+    confettiBurst(true);
+  });
+
+  // 実績通知
+  const ba=document.getElementById("badgeArea");
+  ba.innerHTML="";
+  newlyUnlocked.filter(l=>!l.includes("制覇")).forEach(label=>{
+    const div=document.createElement("div");
+    div.className="badge-unlock";
+    div.innerHTML=`🏅 <span>${label}</span>`;
+    ba.appendChild(div);
+  });
+
+  showScreen("result");
+}
+
+/* ===== EFFECTS ===== */
+function confettiBurst(big){
+  const canvas=document.getElementById("confettiCanvas");
+  canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+  const ctx=canvas.getContext("2d");
+  const colors=["#1a5276","#2e86c1","#b7950b","#27ae60","#e74c3c","#f39c12","#8e44ad"];
+  const n=big?80:24;
+  const particles=Array.from({length:n},()=>({
+    x:canvas.width/2+(Math.random()-.5)*120, y:canvas.height*.35,
+    vx:(Math.random()-.5)*(big?9:5), vy:Math.random()*-6-(big?5:2),
+    size:Math.random()*6+3, color:colors[Math.floor(Math.random()*colors.length)],
+    rot:Math.random()*360, vr:(Math.random()-.5)*10,
+  }));
+  let frame=0, max=big?90:55;
+  function tick(){
+    frame++;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    particles.forEach(p=>{
+      p.vy+=.18; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot*Math.PI/180);
+      ctx.fillStyle=p.color; ctx.globalAlpha=Math.max(0,1-frame/max);
+      ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size);
+      ctx.restore();
+    });
+    if(frame<max) requestAnimationFrame(tick);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  tick();
+}
+function spawnFloat(text){
+  const el=document.createElement("div");
+  el.className="float-score"; el.textContent=text;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1000);
+}
+function flashCombo(text){
+  const pop=document.getElementById("comboPop");
+  pop.textContent="⚡ "+text; pop.classList.add("show");
+  setTimeout(()=>pop.classList.remove("show"),1300);
+}
+function confirmExit(){ clearInterval(timerInterval); goHome(); }
+function goHome(){ showScreen("home"); renderHome(); }
+
+/* ===== INIT ===== */
+renderHome();
+</script>
+</body>
+</html>
